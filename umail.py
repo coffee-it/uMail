@@ -14,7 +14,7 @@ AUTH_LOGIN = 'LOGIN'
 
 class SMTP:
     def cmd(self, cmd_str):
-        sock = self._sock;
+        sock = self._sock
         sock.write('%s\r\n' % cmd_str)
         resp = []
         next = True
@@ -27,10 +27,19 @@ class SMTP:
     def __init__(self, host, port, ssl=False, username=None, password=None):
         import ussl
         self.username = username
-        addr = usocket.getaddrinfo(host, port)[0][-1]
+        addresses = usocket.getaddrinfo(host, port)
+        # For cases where IPv6 addresses resolving is harmful possible to use this usocket.getaddrinfo(host, port, usocket.AF_INET)[0][-1]...
+        # ... or cycle like here.
         sock = usocket.socket(usocket.AF_INET, usocket.SOCK_STREAM)
         sock.settimeout(DEFAULT_TIMEOUT)
-        sock.connect(addr)
+        for addr in addresses:
+            try:
+                sock.connect(addr[-1])
+                break
+            except:
+                if addr == addresses[-1]:
+                    raise Exception("Connection to server failed")
+                continue
         if ssl:
             sock = ussl.wrap_socket(sock)
         code = int(sock.read(3))
